@@ -22,6 +22,41 @@ from pyrogram import raw, types, enums
 from ..object import Object
 
 
+def resolve_button_style(style):
+    if isinstance(style, enums.ButtonStyle):
+        return style
+
+    if style is None:
+        return enums.ButtonStyle.DEFAULT
+
+    return {
+        "DEFAULT": enums.ButtonStyle.DEFAULT,
+        "PRIMARY": enums.ButtonStyle.PRIMARY,
+        "DANGER": enums.ButtonStyle.DANGER,
+        "SUCCESS": enums.ButtonStyle.SUCCESS,
+    }.get(str(style).upper(), enums.ButtonStyle.DEFAULT)
+
+
+def resolve_icon_custom_emoji_id(icon_custom_emoji_id):
+    if icon_custom_emoji_id is None:
+        return None
+
+    if icon_custom_emoji_id == "":
+        return None
+
+    return str(icon_custom_emoji_id)
+
+
+def parse_icon_custom_emoji_id(icon_custom_emoji_id):
+    if not icon_custom_emoji_id:
+        return None
+
+    try:
+        return int(icon_custom_emoji_id)
+    except (TypeError, ValueError):
+        return None
+
+
 class KeyboardButton(Object):
     """One button of the reply keyboard.
     For simple text buttons String can be used instead of this object to specify text of the button.
@@ -44,10 +79,10 @@ class KeyboardButton(Object):
             If specified, the described `Web App <https://core.telegram.org/bots/webapps>`_ will be launched when the
             button is pressed. The Web App will be able to send a “web_app_data” service message. Available in private
             chats only.
-            
+
         icon_custom_emoji_id (``str``, *optional*):
             Unique identifier of the custom emoji shown before the text of the button.
-            
+
         style (:obj:`~pyrogram.enums.ButtonStyle`, *optional*):
             Style of the button.
     """
@@ -59,7 +94,7 @@ class KeyboardButton(Object):
         request_location: bool = None,
         web_app: "types.WebAppInfo" = None,
         icon_custom_emoji_id: Optional[str] = None,
-        style: "enums.ButtonStyle" = enums.ButtonStyle.DEFAULT
+        style: "enums.ButtonStyle" = enums.ButtonStyle.DEFAULT,
     ):
         super().__init__()
 
@@ -67,14 +102,14 @@ class KeyboardButton(Object):
         self.request_contact = request_contact
         self.request_location = request_location
         self.web_app = web_app
-        self.icon_custom_emoji_id = icon_custom_emoji_id
-        self.style = style
+        self.icon_custom_emoji_id = resolve_icon_custom_emoji_id(icon_custom_emoji_id)
+        self.style = resolve_button_style(style)
 
     @staticmethod
     def read(b):
         button_style = enums.ButtonStyle.DEFAULT
         icon_custom_emoji_id = None
-        
+
         raw_style = getattr(b, "style", None)
 
         if raw_style is not None:
@@ -84,15 +119,17 @@ class KeyboardButton(Object):
                 button_style = enums.ButtonStyle.DANGER
             elif getattr(raw_style, "bg_success", False):
                 button_style = enums.ButtonStyle.SUCCESS
-            if getattr(raw_style, "icon", None):
-                icon_custom_emoji_id = str(raw_style.icon)
+
+            raw_icon = getattr(raw_style, "icon", None)
+            if raw_icon is not None:
+                icon_custom_emoji_id = str(raw_icon)
 
         if isinstance(b, raw.types.KeyboardButtonRequestPhone):
             return KeyboardButton(
                 text=b.text,
                 request_contact=True,
                 style=button_style,
-                icon_custom_emoji_id=icon_custom_emoji_id
+                icon_custom_emoji_id=icon_custom_emoji_id,
             )
 
         if isinstance(b, raw.types.KeyboardButtonRequestGeoLocation):
@@ -100,40 +137,53 @@ class KeyboardButton(Object):
                 text=b.text,
                 request_location=True,
                 style=button_style,
-                icon_custom_emoji_id=icon_custom_emoji_id
+                icon_custom_emoji_id=icon_custom_emoji_id,
             )
 
         if isinstance(b, raw.types.KeyboardButtonSimpleWebView):
             return KeyboardButton(
                 text=b.text,
-                web_app=types.WebAppInfo(
-                    url=b.url
-                ),
+                web_app=types.WebAppInfo(url=b.url),
                 style=button_style,
-                icon_custom_emoji_id=icon_custom_emoji_id
+                icon_custom_emoji_id=icon_custom_emoji_id,
             )
 
         return KeyboardButton(
             text=b.text,
             style=button_style,
-            icon_custom_emoji_id=icon_custom_emoji_id
+            icon_custom_emoji_id=icon_custom_emoji_id,
         )
 
     def write(self):
         kwargs = {}
-        if hasattr(raw.types, "KeyboardButtonStyle"):
+
+        icon_id = parse_icon_custom_emoji_id(self.icon_custom_emoji_id)
+
+        if (
+            hasattr(raw.types, "KeyboardButtonStyle")
+            and (
+                self.style != enums.ButtonStyle.DEFAULT
+                or icon_id is not None
+            )
+        ):
             kwargs["style"] = raw.types.KeyboardButtonStyle(
                 bg_primary=self.style == enums.ButtonStyle.PRIMARY,
                 bg_danger=self.style == enums.ButtonStyle.DANGER,
                 bg_success=self.style == enums.ButtonStyle.SUCCESS,
-                icon=int(self.icon_custom_emoji_id) if self.icon_custom_emoji_id else None
+                icon=icon_id,
             )
 
         if self.request_contact:
             return raw.types.KeyboardButtonRequestPhone(text=self.text, **kwargs)
-        elif self.request_location:
+
+        if self.request_location:
             return raw.types.KeyboardButtonRequestGeoLocation(text=self.text, **kwargs)
-        elif self.web_app:
-            return raw.types.KeyboardButtonSimpleWebView(text=self.text, url=self.web_app.url, **kwargs)
-        else:
-            return raw.types.KeyboardButton(text=self.text, **kwargs)
+
+        if self.web_app:
+            return raw.types.KeyboardButtonSimpleWebView(
+                text=self.text,
+                url=self.web_app.url,
+                **kwargs,
+            )
+
+        return raw.types.KeyboardButton(text=self.text, **kwargs)
