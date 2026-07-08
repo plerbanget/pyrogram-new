@@ -21,6 +21,35 @@ from importlib import import_module
 from . import types, functions, base, core
 from .all import objects
 
+
 for k, v in objects.items():
     path, name = v.rsplit(".", 1)
     objects[k] = getattr(import_module(path), name)
+
+
+# Compatibility reader for legacy keyboardButton#a2fa4880.
+# Telegram can still send this old constructor in incoming updates.
+#
+# Old constructor:
+#   keyboardButton#a2fa4880 text:string = KeyboardButton;
+#
+# New constructor:
+#   keyboardButton#7d170cff flags:# style:flags.10?KeyboardButtonStyle text:string = KeyboardButton;
+#
+# Do not map 0xa2fa4880 directly to raw.types.KeyboardButton in all.py,
+# because the new KeyboardButton reader expects flags first.
+try:
+    from io import BytesIO
+
+    from .core.primitives import String
+    from .types import KeyboardButton
+
+    class _LegacyKeyboardButton:
+        @staticmethod
+        def read(b: BytesIO, *args):
+            return KeyboardButton(text=String.read(b))
+
+    objects[0xa2fa4880] = _LegacyKeyboardButton
+
+except Exception:
+    pass
