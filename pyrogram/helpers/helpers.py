@@ -20,6 +20,33 @@ INLINE_BUTTON_TYPES = {
     "copy_text",
 }
 
+BUTTON_STYLE = {
+    "DEFAULT": enums.ButtonStyle.DEFAULT,
+    "PRIMARY": enums.ButtonStyle.PRIMARY,
+    "DANGER": enums.ButtonStyle.DANGER,
+    "SUCCESS": enums.ButtonStyle.SUCCESS,
+}
+
+
+def _resolve_style(style=None):
+    if style is None:
+        return enums.ButtonStyle.DEFAULT
+
+    if isinstance(style, enums.ButtonStyle):
+        return style
+
+    return BUTTON_STYLE.get(str(style).upper(), enums.ButtonStyle.DEFAULT)
+
+
+def _resolve_icon(icon_custom_emoji_id=None):
+    if icon_custom_emoji_id is None:
+        return None
+
+    if icon_custom_emoji_id == "":
+        return None
+
+    return str(icon_custom_emoji_id)
+
 
 def ikb(rows=None):
     """
@@ -29,8 +56,10 @@ def ikb(rows=None):
         "text"
         InlineKeyboardButton(...)
         {"text": "...", "value": "...", "style": enums.ButtonStyle.SUCCESS}
+        {"text": "...", "value": "...", "style": "SUCCESS", "icon_custom_emoji_id": "..."}
         ("text", "callback")
         ("text", "callback", enums.ButtonStyle.SUCCESS)
+        ("text", "callback", "SUCCESS")
         ("text", "callback", enums.ButtonStyle.SUCCESS, "custom_emoji_id")
         ("text", "https://example.com", "url")
         ("text", "https://example.com", "url", enums.ButtonStyle.PRIMARY)
@@ -80,15 +109,22 @@ def _btn_from_tuple(data):
     icon_custom_emoji_id = None
 
     for item in data[2:]:
+        if item is None:
+            continue
+
         if isinstance(item, enums.ButtonStyle):
             style = item
+
         elif isinstance(item, str):
+            item_upper = item.upper()
+
             if item in INLINE_BUTTON_TYPES:
                 button_type = item
+            elif item_upper in BUTTON_STYLE:
+                style = BUTTON_STYLE[item_upper]
             else:
                 icon_custom_emoji_id = item
-        elif item is None:
-            continue
+
         else:
             icon_custom_emoji_id = str(item)
 
@@ -97,7 +133,7 @@ def _btn_from_tuple(data):
         value=value,
         type=button_type,
         style=style,
-        icon_custom_emoji_id=icon_custom_emoji_id
+        icon_custom_emoji_id=icon_custom_emoji_id,
     )
 
 
@@ -106,15 +142,17 @@ def btn(
     value,
     type="callback_data",
     style=enums.ButtonStyle.DEFAULT,
-    icon_custom_emoji_id=None
+    icon_custom_emoji_id=None,
 ):
     """
     Create an InlineKeyboardButton.
     """
     kwargs = {
         type: value,
-        "style": style,
+        "style": _resolve_style(style),
     }
+
+    icon_custom_emoji_id = _resolve_icon(icon_custom_emoji_id)
 
     if icon_custom_emoji_id is not None:
         kwargs["icon_custom_emoji_id"] = icon_custom_emoji_id
@@ -173,6 +211,20 @@ def ntb(button):
 
 
 def kb(rows=None, **kwargs):
+    """
+    Create a ReplyKeyboardMarkup from a list of lists of buttons.
+
+    Supports:
+        "text"
+        KeyboardButton(...)
+        {"text": "...", "style": enums.ButtonStyle.SUCCESS}
+        {"text": "...", "style": "SUCCESS", "icon_custom_emoji_id": "..."}
+        ("text",)
+        ("text", enums.ButtonStyle.SUCCESS)
+        ("text", "SUCCESS")
+        ("text", enums.ButtonStyle.SUCCESS, "custom_emoji_id")
+        ("text", "SUCCESS", "custom_emoji_id")
+    """
     if rows is None:
         rows = []
 
@@ -183,11 +235,18 @@ def kb(rows=None, **kwargs):
 
         for button in row:
             if isinstance(button, KeyboardButton):
-                pass
-            elif isinstance(button, str):
-                button = KeyboardButton(button)
+                line.append(button)
+                continue
+
+            if isinstance(button, str):
+                button = kbtn(button)
+
             elif isinstance(button, dict):
-                button = KeyboardButton(**button)
+                button = kbtn(**button)
+
+            elif isinstance(button, (list, tuple)):
+                button = _kbtn_from_tuple(button)
+
             else:
                 raise TypeError(f"Unsupported keyboard button type: {type(button).__name__}")
 
@@ -198,7 +257,64 @@ def kb(rows=None, **kwargs):
     return ReplyKeyboardMarkup(keyboard=lines, **kwargs)
 
 
-kbtn = KeyboardButton
+def _kbtn_from_tuple(data):
+    if len(data) < 1:
+        raise ValueError("Keyboard button tuple/list must contain at least text")
+
+    text = data[0]
+    style = enums.ButtonStyle.DEFAULT
+    icon_custom_emoji_id = None
+    kwargs = {}
+
+    for item in data[1:]:
+        if item is None:
+            continue
+
+        if isinstance(item, enums.ButtonStyle):
+            style = item
+
+        elif isinstance(item, dict):
+            kwargs.update(item)
+
+        elif isinstance(item, str):
+            item_upper = item.upper()
+
+            if item_upper in BUTTON_STYLE:
+                style = BUTTON_STYLE[item_upper]
+            else:
+                icon_custom_emoji_id = item
+
+        else:
+            icon_custom_emoji_id = str(item)
+
+    return kbtn(
+        text,
+        style=style,
+        icon_custom_emoji_id=icon_custom_emoji_id,
+        **kwargs,
+    )
+
+
+def kbtn(
+    text,
+    style=enums.ButtonStyle.DEFAULT,
+    icon_custom_emoji_id=None,
+    **kwargs,
+):
+    """
+    Create a KeyboardButton with ButtonStyle and optional custom emoji icon.
+    """
+    icon_custom_emoji_id = _resolve_icon(icon_custom_emoji_id)
+
+    button_kwargs = {
+        "style": _resolve_style(style),
+        **kwargs,
+    }
+
+    if icon_custom_emoji_id is not None:
+        button_kwargs["icon_custom_emoji_id"] = icon_custom_emoji_id
+
+    return KeyboardButton(text, **button_kwargs)
 
 
 def force_reply(selective=True):
