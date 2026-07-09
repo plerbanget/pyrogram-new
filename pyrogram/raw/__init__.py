@@ -26,9 +26,8 @@ for k, v in objects.items():
     path, name = v.rsplit(".", 1)
     objects[k] = getattr(import_module(path), name)
 
-
 # Compatibility readers for legacy keyboard button constructors.
-# Some old constructors do not have flags/style, so they must not be parsed
+# Some old constructors do not have new style flags, so they must not be parsed
 # directly by the new generated classes.
 
 try:
@@ -89,6 +88,34 @@ try:
         def read(b: BytesIO, *args):
             return types.KeyboardButtonBuy(text=String.read(b))
 
+    class _LegacyKeyboardButtonUrlAuth:
+        @staticmethod
+        def read(b: BytesIO, *args):
+            flags = Int.read(b)
+            text = String.read(b)
+            fwd_text = String.read(b) if flags & (1 << 0) else None
+            url = String.read(b)
+            button_id = Int.read(b)
+
+            return types.KeyboardButtonUrlAuth(
+                text=text,
+                url=url,
+                button_id=button_id,
+                fwd_text=fwd_text,
+            )
+
+    class _LegacyKeyboardButtonRequestPoll:
+        @staticmethod
+        def read(b: BytesIO, *args):
+            flags = Int.read(b)
+            quiz = TLObject.read(b) if flags & (1 << 0) else None
+            text = String.read(b)
+
+            return types.KeyboardButtonRequestPoll(
+                text=text,
+                quiz=quiz,
+            )
+
     class _LegacyKeyboardButtonUserProfile:
         @staticmethod
         def read(b: BytesIO, *args):
@@ -117,6 +144,7 @@ try:
             button_id = Int.read(b)
             peer_type = TLObject.read(b)
             max_quantity = Int.read(b)
+
             return types.KeyboardButtonRequestPeer(
                 text=text,
                 button_id=button_id,
@@ -141,13 +169,15 @@ try:
     objects[0x0568a748] = _LegacyKeyboardButtonSwitchInline
     objects[0x50f41ccf] = _LegacyKeyboardButtonGame
     objects[0xafd93fbb] = _LegacyKeyboardButtonBuy
+    objects[0x10b78d29] = _LegacyKeyboardButtonUrlAuth
+    objects[0xbbc7515d] = _LegacyKeyboardButtonRequestPoll
     objects[0x308660c1] = _LegacyKeyboardButtonUserProfile
     objects[0x13767230] = _LegacyKeyboardButtonWebView
     objects[0xa0c0505c] = _LegacyKeyboardButtonSimpleWebView
     objects[0x53d7bfd8] = _LegacyKeyboardButtonRequestPeer
     objects[0x75d2698e] = _LegacyKeyboardButtonCopy
 
-    # This old callback constructor already has flags, so generated class can read it.
+    # Old callback constructor that already has flags in newer old layers.
     if hasattr(types, "KeyboardButtonCallback"):
         objects[0x35bbdb6b] = types.KeyboardButtonCallback
 
