@@ -143,15 +143,15 @@ if is_build_command():
 
 
 setup(
-    name="kelragram",
+    name="levigram",
     version=version,
     description="Elegant, modern and asynchronous Telegram MTProto API framework in Python for users and bots (Navy Fork)",
     long_description=readme,
     long_description_content_type="text/markdown",
-    url="https://github.com/Narutorawr/kelragram",
-    download_url="https://github.com/Narutorawr/kelragram/releases/latest",
-    author="kelra",
-    author_email="datauserbot@gmail.com",
+    url="https://github.com/plerbanget/pyrogram-new",
+    download_url="https://github.com/plerbanget/pyrogram-new/releases/latest",
+    author="Levine",
+    author_email="gwangy682@gmail.com",
     license="LGPLv3",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
