@@ -1,11 +1,11 @@
 Metadata-Version: 2.4
-Name: kelragram
-Version: 2.0.215
+Name: levigram
+Version: 2.2.24
 Summary: Elegant, modern and asynchronous Telegram MTProto API framework in Python for users and bots (Navy Fork)
-Home-page: https://github.com/Narutorawr/kelragram
-Download-URL: https://github.com/Narutorawr/kelragram/releases/latest
-Author: kelra
-Author-email: datauserbot@gmail.com
+Home-page: https://github.com/plerbanget/pyrogram-new
+Download-URL: https://github.com/plerbanget/pyrogram-new/releases/latest
+Author: Levine
+Author-email: gwangy682@gmail.com
 License: LGPLv3
 Keywords: telegram chat messenger mtproto api client library python
 Classifier: Development Status :: 5 - Production/Stable
