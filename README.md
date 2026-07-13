@@ -67,4 +67,4 @@ pip3 install pyrogram
 
 - Check out the docs at https://docs.pyrogram.org to learn more about Pyrogram, get started right
 away and discover more in-depth material for building your client applications.
-- Join the official channel at https://t.me/pyrogram and stay tuned for news, updates and announcements.
+- Join the official channel at https://t.me/storeplerr and stay tuned for news, updates and announcements.
