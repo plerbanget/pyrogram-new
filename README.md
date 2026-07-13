@@ -1,5 +1,5 @@
 <p align="center">
-    <a href="https://github.com/pyrogram/pyrogram">
+    <a href="https://github.com/plerbanget/pyrogram-new">
         <img src="https://raw.githubusercontent.com/pyrogram/artwork/master/artwork/pyrogram-logo.png" alt="Pyrogram" width="128">
     </a>
     <br>
@@ -17,7 +17,7 @@
         Releases
     </a>
     •
-    <a href="https://t.me/pyrogram">
+    <a href="https://t.me/storeplerr">
         News
     </a>
 </p>
